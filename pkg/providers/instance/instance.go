@@ -461,7 +461,7 @@ func filterExoticInstanceTypes(instanceTypes []*cloudprovider.InstanceType) []*c
 	for _, it := range instanceTypes {
 		// deprioritize metal even if our opinionated filter isn't applied due to something like an instance family
 		// requirement
-		if _, ok := lo.Find(it.Requirements.Get(v1beta1.LabelInstanceSize).Values(), func(size string) bool { return strings.Contains(size, "metal") }); ok {
+		if _, ok := lo.Find(it.Requirements.Get(v1beta1.LabelInstanceSize).ValuesJ(), func(size string) bool { return strings.Contains(size, "metal") }); ok {
 			continue
 		}
 		if !resources.IsZero(it.Capacity[v1beta1.ResourceAWSNeuron]) ||

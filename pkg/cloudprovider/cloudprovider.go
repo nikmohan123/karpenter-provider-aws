@@ -281,7 +281,7 @@ func (c *CloudProvider) instanceToNodeClaim(i *instance.Instance, instanceType *
 	if instanceType != nil {
 		for key, req := range instanceType.Requirements {
 			if req.Len() == 1 {
-				labels[key] = req.Values()[0]
+				labels[key] = req.ValuesJ()[0]
 			}
 		}
 		resourceFilter := func(n v1.ResourceName, v resource.Quantity) bool {
