@@ -95,10 +95,12 @@ var _ = Describe("Expiration", func() {
 	Context("Budgets", func() {
 		It("should respect budgets for empty expiration", func() {
 			coretest.ReplaceRequirements(nodePool,
-				v1.NodeSelectorRequirement{
-					Key:      v1beta1.LabelInstanceSize,
-					Operator: v1.NodeSelectorOpIn,
-					Values:   []string{"2xlarge"},
+				corev1beta1.NodeSelectorRequirementWithFlexibility{
+					NodeSelectorRequirement: v1.NodeSelectorRequirement{
+						Key:      v1beta1.LabelInstanceSize,
+						Operator: v1.NodeSelectorOpIn,
+						Values:   []string{"2xlarge"},
+					},
 				},
 			)
 			nodePool.Spec.Disruption.Budgets = []corev1beta1.Budget{{
@@ -171,10 +173,12 @@ var _ = Describe("Expiration", func() {
 		})
 		It("should respect budgets for non-empty delete expiration", func() {
 			nodePool = coretest.ReplaceRequirements(nodePool,
-				v1.NodeSelectorRequirement{
-					Key:      v1beta1.LabelInstanceSize,
-					Operator: v1.NodeSelectorOpIn,
-					Values:   []string{"2xlarge"},
+				corev1beta1.NodeSelectorRequirementWithFlexibility{
+					NodeSelectorRequirement: v1.NodeSelectorRequirement{
+						Key:      v1beta1.LabelInstanceSize,
+						Operator: v1.NodeSelectorOpIn,
+						Values:   []string{"2xlarge"},
+					},
 				},
 			)
 			// We're expecting to create 3 nodes, so we'll expect to see at most 2 nodes deleting at one time.
@@ -280,10 +284,12 @@ var _ = Describe("Expiration", func() {
 		})
 		It("should respect budgets for non-empty replace expiration", func() {
 			nodePool = coretest.ReplaceRequirements(nodePool,
-				v1.NodeSelectorRequirement{
-					Key:      v1beta1.LabelInstanceSize,
-					Operator: v1.NodeSelectorOpIn,
-					Values:   []string{"2xlarge"},
+				corev1beta1.NodeSelectorRequirementWithFlexibility{
+					NodeSelectorRequirement: v1.NodeSelectorRequirement{
+						Key:      v1beta1.LabelInstanceSize,
+						Operator: v1.NodeSelectorOpIn,
+						Values:   []string{"2xlarge"},
+					},
 				},
 			)
 			// We're expecting to create 3 nodes, so we'll expect to see at most 2 nodes deleting at one time.

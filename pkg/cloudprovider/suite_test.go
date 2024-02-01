@@ -120,8 +120,8 @@ var _ = Describe("CloudProvider", func() {
 						NodeClassRef: &corev1beta1.NodeClassReference{
 							Name: nodeClass.Name,
 						},
-						Requirements: []v1.NodeSelectorRequirement{
-							{Key: corev1beta1.CapacityTypeLabelKey, Operator: v1.NodeSelectorOpIn, Values: []string{corev1beta1.CapacityTypeOnDemand}},
+						Requirements: []corev1beta1.NodeSelectorRequirementWithFlexibility{
+							{NodeSelectorRequirement: v1.NodeSelectorRequirement{Key: corev1beta1.CapacityTypeLabelKey, Operator: v1.NodeSelectorOpIn, Values: []string{corev1beta1.CapacityTypeOnDemand}}},
 						},
 					},
 				},
@@ -140,11 +140,13 @@ var _ = Describe("CloudProvider", func() {
 	})
 	It("should return an ICE error when there are no instance types to launch", func() {
 		// Specify no instance types and expect to receive a capacity error
-		nodeClaim.Spec.Requirements = []v1.NodeSelectorRequirement{
+		nodeClaim.Spec.Requirements = []corev1beta1.NodeSelectorRequirementWithFlexibility{
 			{
-				Key:      v1.LabelInstanceTypeStable,
-				Operator: v1.NodeSelectorOpIn,
-				Values:   []string{"test-instance-type"},
+				NodeSelectorRequirement: v1.NodeSelectorRequirement{
+					Key:      v1.LabelInstanceTypeStable,
+					Operator: v1.NodeSelectorOpIn,
+					Values:   []string{"test-instance-type"},
+				},
 			},
 		}
 		ExpectApplied(ctx, env.Client, nodePool, nodeClass, nodeClaim)
@@ -603,11 +605,13 @@ var _ = Describe("CloudProvider", func() {
 	})
 	Context("EFA", func() {
 		It("should include vpc.amazonaws.com/efa on a nodeclaim if it requests it", func() {
-			nodeClaim.Spec.Requirements = []v1.NodeSelectorRequirement{
+			nodeClaim.Spec.Requirements = []corev1beta1.NodeSelectorRequirementWithFlexibility{
 				{
-					Key:      v1.LabelInstanceTypeStable,
-					Operator: v1.NodeSelectorOpIn,
-					Values:   []string{"dl1.24xlarge"},
+					NodeSelectorRequirement: v1.NodeSelectorRequirement{
+						Key:      v1.LabelInstanceTypeStable,
+						Operator: v1.NodeSelectorOpIn,
+						Values:   []string{"dl1.24xlarge"},
+					},
 				},
 			}
 			nodeClaim.Spec.Resources.Requests = v1.ResourceList{v1beta1.ResourceEFA: resource.MustParse("1")}
@@ -617,11 +621,13 @@ var _ = Describe("CloudProvider", func() {
 			Expect(lo.Keys(cloudProviderNodeClaim.Status.Allocatable)).To(ContainElement(v1beta1.ResourceEFA))
 		})
 		It("shouldn't include vpc.amazonaws.com/efa on a nodeclaim if it doesn't request it", func() {
-			nodeClaim.Spec.Requirements = []v1.NodeSelectorRequirement{
+			nodeClaim.Spec.Requirements = []corev1beta1.NodeSelectorRequirementWithFlexibility{
 				{
-					Key:      v1.LabelInstanceTypeStable,
-					Operator: v1.NodeSelectorOpIn,
-					Values:   []string{"dl1.24xlarge"},
+					NodeSelectorRequirement: v1.NodeSelectorRequirement{
+						Key:      v1.LabelInstanceTypeStable,
+						Operator: v1.NodeSelectorOpIn,
+						Values:   []string{"dl1.24xlarge"},
+					},
 				},
 			}
 			ExpectApplied(ctx, env.Client, nodePool, nodeClass, nodeClaim)
