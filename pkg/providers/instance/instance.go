@@ -92,8 +92,9 @@ func (p *Provider) Create(ctx context.Context, nodeClass *v1beta1.EC2NodeClass, 
 		instanceTypes = p.filterInstanceTypes(nodeClaim, instanceTypes)
 	}
 	instanceTypes = orderInstanceTypesByPrice(instanceTypes, scheduling.NewNodeSelectorRequirements(nodeClaim.Spec.Requirements...))
-	if len(instanceTypes) > lo.Max([]int{MaxInstanceTypes, lo.FromPtr(req.MinValues)}) {
-		instanceTypes = instanceTypes[0:MaxInstanceTypes]
+	maxInstanceTypesIncludingFlexibility := lo.Ternary(req.MinValues != nil, lo.Max([]int{MaxInstanceTypes, lo.FromPtr(req.MinValues)}), MaxInstanceTypes)
+	if len(instanceTypes) > maxInstanceTypesIncludingFlexibility {
+		instanceTypes = instanceTypes[0:maxInstanceTypesIncludingFlexibility]
 	}
 	tags := getTags(ctx, nodeClass, nodeClaim)
 	fleetInstance, err := p.launchInstance(ctx, nodeClass, nodeClaim, instanceTypes, tags)
