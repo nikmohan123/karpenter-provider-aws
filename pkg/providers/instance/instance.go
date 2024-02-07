@@ -84,9 +84,15 @@ func NewProvider(ctx context.Context, region string, ec2api ec2iface.EC2API, una
 }
 
 func (p *Provider) Create(ctx context.Context, nodeClass *v1beta1.EC2NodeClass, nodeClaim *corev1beta1.NodeClaim, instanceTypes []*cloudprovider.InstanceType) (*Instance, error) {
-	instanceTypes = p.filterInstanceTypes(nodeClaim, instanceTypes)
+	req, found := lo.Find(nodeClaim.Spec.Requirements, func(req corev1beta1.NodeSelectorRequirementWithFlexibility) bool {
+		return req.Key == v1.LabelInstanceTypeStable
+	})
+	// Only apply filtering of expensive instance types if minValues is not found for instanceType requirement.
+	if !found || req.MinValues == nil {
+		instanceTypes = p.filterInstanceTypes(nodeClaim, instanceTypes)
+	}
 	instanceTypes = orderInstanceTypesByPrice(instanceTypes, scheduling.NewNodeSelectorRequirements(nodeClaim.Spec.Requirements...))
-	if len(instanceTypes) > MaxInstanceTypes {
+	if len(instanceTypes) > lo.Max([]int{MaxInstanceTypes, lo.FromPtr(req.MinValues)}) {
 		instanceTypes = instanceTypes[0:MaxInstanceTypes]
 	}
 	tags := getTags(ctx, nodeClass, nodeClaim)

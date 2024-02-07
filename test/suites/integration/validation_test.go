@@ -129,6 +129,39 @@ var _ = Describe("Validation", func() {
 			}
 			Expect(env.Client.Create(env.Context, nodePool)).ToNot(Succeed())
 		})
+		It("should error when minValues for a requirement key is negative", func() {
+			nodePool = coretest.ReplaceRequirements(nodePool, corev1beta1.NodeSelectorRequirementWithFlexibility{
+				NodeSelectorRequirement: v1.NodeSelectorRequirement{
+					Key:      v1.LabelInstanceTypeStable,
+					Operator: v1.NodeSelectorOpIn,
+					Values:   []string{"c4.large", "c4.xlarge"},
+				},
+				MinValues: lo.ToPtr(-1)},
+			)
+			Expect(env.Client.Create(env.Context, nodePool)).ToNot(Succeed())
+		})
+		It("should error when minValues for a requirement key is more than 100", func() {
+			nodePool = coretest.ReplaceRequirements(nodePool, corev1beta1.NodeSelectorRequirementWithFlexibility{
+				NodeSelectorRequirement: v1.NodeSelectorRequirement{
+					Key:      v1.LabelInstanceTypeStable,
+					Operator: v1.NodeSelectorOpIn,
+					Values:   []string{"c4.large", "c4.xlarge"},
+				},
+				MinValues: lo.ToPtr(101)},
+			)
+			Expect(env.Client.Create(env.Context, nodePool)).ToNot(Succeed())
+		})
+		It("should error when minValues for a requirement key is greater than the values specified within In operator", func() {
+			nodePool = coretest.ReplaceRequirements(nodePool, corev1beta1.NodeSelectorRequirementWithFlexibility{
+				NodeSelectorRequirement: v1.NodeSelectorRequirement{
+					Key:      v1.LabelInstanceTypeStable,
+					Operator: v1.NodeSelectorOpIn,
+					Values:   []string{"c4.large", "c4.xlarge"},
+				},
+				MinValues: lo.ToPtr(3)},
+			)
+			Expect(env.Client.Create(env.Context, nodePool)).ToNot(Succeed())
+		})
 	})
 	Context("EC2NodeClass", func() {
 		It("should error when amiSelectorTerms are not defined for amiFamily Custom", func() {
