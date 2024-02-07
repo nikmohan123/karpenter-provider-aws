@@ -189,8 +189,7 @@ var _ = Describe("CloudProvider", func() {
 			createFleetInput := awsEnv.EC2API.CreateFleetBehavior.CalledWithInput.Pop()
 			Expect(createFleetInput.Context).To(BeNil())
 		})
-		It("should respect minValues from NodePool", func() {
-			// TODO: Nikhil here
+		It("should set context on the CreateFleet request and respect minValues from NodePool", func() {
 			nodeClass.Spec.Context = aws.String("context-1234")
 			nodePool := coretest.NodePool(corev1beta1.NodePool{
 				Spec: corev1beta1.NodePoolSpec{
@@ -241,6 +240,68 @@ var _ = Describe("CloudProvider", func() {
 				}
 			}
 			Expect(len(uniqueInstanceTypes)).To(BeNumerically(">=", lo.FromPtr(nodePool.Spec.Template.Spec.Requirements[0].MinValues)))
+			Expect(aws.StringValue(createFleetInput.Context)).To(Equal("context-1234"))
+		})
+		It("should set context on the CreateFleet request and respect minValues from multiple keys in NodePool", func() {
+			nodeClass.Spec.Context = aws.String("context-1234")
+			nodePool := coretest.NodePool(corev1beta1.NodePool{
+				Spec: corev1beta1.NodePoolSpec{
+					Template: corev1beta1.NodeClaimTemplate{
+						Spec: corev1beta1.NodeClaimSpec{
+							NodeClassRef: &corev1beta1.NodeClassReference{
+								Name: nodeClass.Name,
+							},
+							Requirements: []corev1beta1.NodeSelectorRequirementWithFlexibility{
+								{
+									NodeSelectorRequirement: v1.NodeSelectorRequirement{
+										Key:      v1.LabelInstanceTypeStable,
+										Operator: v1.NodeSelectorOpIn,
+										Values:   []string{"m5.large", "m5.xlarge", "c6g.large", "trn1.2xlarge"},
+									},
+									MinValues: lo.ToPtr(2),
+								},
+								{
+									NodeSelectorRequirement: v1.NodeSelectorRequirement{
+										Key:      v1beta1.LabelInstanceFamily,
+										Operator: v1.NodeSelectorOpIn,
+										Values:   []string{"m5", "c6g", "trn1"},
+									},
+									MinValues: lo.ToPtr(3),
+								},
+							},
+						},
+					},
+				},
+			})
+
+			ExpectApplied(ctx, env.Client, nodePool, nodeClass)
+
+			pod1 := coretest.UnschedulablePod(
+				coretest.PodOptions{
+					ResourceRequirements: v1.ResourceRequirements{Requests: v1.ResourceList{
+						v1.ResourceCPU: resource.MustParse("1")},
+					},
+				})
+			pod2 := coretest.UnschedulablePod(
+				coretest.PodOptions{
+					ResourceRequirements: v1.ResourceRequirements{Requests: v1.ResourceList{
+						v1.ResourceCPU: resource.MustParse("1")},
+					},
+				})
+			ExpectProvisioned(ctx, env.Client, cluster, cloudProvider, prov, pod1, pod2)
+			node1 := ExpectScheduled(ctx, env.Client, pod1)
+			node2 := ExpectScheduled(ctx, env.Client, pod2)
+			Expect(node1.Name).ToNot(Equal(node2.Name))
+			Expect(awsEnv.EC2API.CreateFleetBehavior.CalledWithInput.Len()).To(Equal(2))
+			createFleetInput := awsEnv.EC2API.CreateFleetBehavior.CalledWithInput.Pop()
+			uniqueInstanceTypes := sets.String{}
+			for _, launchTemplateConfig := range createFleetInput.LaunchTemplateConfigs {
+				for _, override := range launchTemplateConfig.Overrides {
+					uniqueInstanceTypes.Insert(*override.InstanceType)
+				}
+			}
+			Expect(len(uniqueInstanceTypes)).To(BeNumerically(">=", lo.FromPtr(nodePool.Spec.Template.Spec.Requirements[0].MinValues)))
+			Expect(aws.StringValue(createFleetInput.Context)).To(Equal("context-1234"))
 		})
 	})
 	Context("NodeClaim Drift", func() {
