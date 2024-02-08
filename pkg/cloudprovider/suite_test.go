@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"strings"
 	"testing"
 	"time"
 
@@ -295,12 +296,15 @@ var _ = Describe("CloudProvider", func() {
 			Expect(awsEnv.EC2API.CreateFleetBehavior.CalledWithInput.Len()).To(Equal(2))
 			createFleetInput := awsEnv.EC2API.CreateFleetBehavior.CalledWithInput.Pop()
 			uniqueInstanceTypes := sets.String{}
+			uniqueInstanceFamilies := sets.String{}
 			for _, launchTemplateConfig := range createFleetInput.LaunchTemplateConfigs {
 				for _, override := range launchTemplateConfig.Overrides {
 					uniqueInstanceTypes.Insert(*override.InstanceType)
+					uniqueInstanceFamilies.Insert(strings.Split(*override.InstanceType, ".")[0])
 				}
 			}
-			Expect(len(uniqueInstanceTypes)).To(BeNumerically(">=", lo.FromPtr(nodePool.Spec.Template.Spec.Requirements[0].MinValues)))
+			Expect(len(uniqueInstanceTypes)).To(BeNumerically(">=", 2))
+			Expect(len(uniqueInstanceFamilies)).To(BeNumerically(">=", 3))
 			Expect(aws.StringValue(createFleetInput.Context)).To(Equal("context-1234"))
 		})
 	})

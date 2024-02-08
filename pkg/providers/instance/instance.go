@@ -84,15 +84,20 @@ func NewProvider(ctx context.Context, region string, ec2api ec2iface.EC2API, una
 }
 
 func (p *Provider) Create(ctx context.Context, nodeClass *v1beta1.EC2NodeClass, nodeClaim *corev1beta1.NodeClaim, instanceTypes []*cloudprovider.InstanceType) (*Instance, error) {
+	// Check for the instance-type requirement key
 	req, found := lo.Find(nodeClaim.Spec.Requirements, func(req corev1beta1.NodeSelectorRequirementWithFlexibility) bool {
 		return req.Key == v1.LabelInstanceTypeStable
 	})
-	// Only apply filtering of expensive instance types if minValues is not found for instanceType requirement.
+
+	// Only apply filtering of expensive instance types if minValues is not found for instance-type requirement.
 	if !found || req.MinValues == nil {
 		instanceTypes = p.filterInstanceTypes(nodeClaim, instanceTypes)
 	}
 	instanceTypes = orderInstanceTypesByPrice(instanceTypes, scheduling.NewNodeSelectorRequirements(nodeClaim.Spec.Requirements...))
+
+	// maxInstanceTypes needs to include flexibility defined by minValues of instance-type requirement. So, we chose between the max (minValues, 60)
 	maxInstanceTypesIncludingFlexibility := lo.Ternary(req.MinValues != nil, lo.Max([]int{MaxInstanceTypes, lo.FromPtr(req.MinValues)}), MaxInstanceTypes)
+
 	if len(instanceTypes) > maxInstanceTypesIncludingFlexibility {
 		instanceTypes = instanceTypes[0:maxInstanceTypesIncludingFlexibility]
 	}
